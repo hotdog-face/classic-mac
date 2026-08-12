@@ -41,6 +41,14 @@ you supply your own System boot disk.
 [demos-mac](demos-mac/) — a little demoscene set pushing the 68000: **cube**, **plasma**,
 **starfield**, **tunnel**, and the obligatory **spinning donut**.
 
+[lum-mac](lum-mac/) — a frame-streamed animation piece (fan art of Lum from *Urusei
+Yatsura*; character © Rumiko Takahashi).
+
+[movie-mac](movie-mac/) — our early full-motion-video player experiment, with the
+Python frame-stream generators. For real video on a compact Mac we now use Fred Stark's
+excellent [MacFlim](https://github.com/fstark/macflim) — this stays here as the road we
+took to get there.
+
 ## Tooling
 
 [pce-measure](pce-measure/) — configs and notes for measuring *true* 8 MHz frame rates with
