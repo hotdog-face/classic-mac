@@ -1,0 +1,9 @@
+build/
+build-demo/
+build_host_test/
+CMakeFiles/
+.DS_Store
+*.o
+pce.log
+pram-*.dat
+ser_*.out

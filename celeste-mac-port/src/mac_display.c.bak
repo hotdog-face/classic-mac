@@ -1,0 +1,140 @@
+/*
+ * mac_display.c -- 16-color index framebuffer -> 1-bit B&W, blitted to the
+ * window.  Tuned for the 8MHz 68000:
+ *
+ *   - Per-color 8x8 PATTERNS (dither_tables.h), not luminance thresholds:
+ *     each material gets a distinct texture, which is both more readable at
+ *     1-bit and cheaper (a solid-color output byte is one table lookup).
+ *   - SOLID-RUN fast path: an output byte covering 4 same-color source pixels
+ *     comes straight from the pattern table.  Most of the screen qualifies.
+ *   - DIRTY-ROW tracking: p8_screen rows unchanged since the last present are
+ *     neither re-dithered nor blitted.  Celeste's screens are static rooms,
+ *     so typically only the player/particle rows pay anything.  CopyBits then
+ *     moves just the dirty band.
+ *   - Each source row is dithered once, the output row duplicated (2x scale).
+ *
+ * Patterns are keyed to screen coordinates so flat fills are stable and
+ * runtime pal() swaps composite correctly.
+ */
+#include "mac_display.h"
+#include "p8.h"
+#include "dither_tables.h"
+
+#include <Quickdraw.h>
+#include <Memory.h>
+
+Rect gDisplayDstRect;
+
+/* full-res 256x256 1-bit offscreen, rowBytes = 32 */
+#define OFF_W        DISP_W                 /* 256 */
+#define OFF_H        DISP_H                 /* 256 */
+#define OFF_ROWBYTES (OFF_W / 8)            /* 32  */
+static BitMap    gOffBits;
+static WindowPtr gWin;
+
+/* previous presented frame, for dirty-row skipping */
+static unsigned char gPrev[P8_W * P8_H];
+static int gForceFull = 1;
+
+/* solid-run patterns, [row-phase][color]: kPattern transposed so the hot loop
+ * holds a single `sprow = gSolidPat[sy&7]` row pointer. */
+static unsigned char gSolidPat[8][16];
+
+OSErr mac_display_init(WindowPtr win)
+{
+    Ptr base;
+    int c, r;
+
+    gWin = win;
+    base = NewPtrClear((Size)OFF_ROWBYTES * OFF_H);
+    if (base == NULL) return MemError();
+
+    gOffBits.baseAddr = base;
+    gOffBits.rowBytes = OFF_ROWBYTES;
+    SetRect(&gOffBits.bounds, 0, 0, OFF_W, OFF_H);
+
+    for (c = 0; c < 16; c++)
+        for (r = 0; r < 8; r++)
+            gSolidPat[r][c] = kPattern[c][r];
+
+    {
+        Rect pr = win->portRect;
+        short ox = (short)((pr.right - pr.left - DISP_W) / 2);
+        short oy = (short)((pr.bottom - pr.top - DISP_H) / 2);
+        if (ox < 0) ox = 0;
+        if (oy < 0) oy = 0;
+        SetRect(&gDisplayDstRect, ox, oy, ox + DISP_W, oy + DISP_H);
+    }
+    gForceFull = 1;
+    return noErr;
+}
+
+void mac_display_dispose(void)
+{
+    if (gOffBits.baseAddr) { DisposePtr(gOffBits.baseAddr); gOffBits.baseAddr = NULL; }
+}
+
+/* next present redraws everything (call after updateEvt exposes the window) */
+void mac_display_invalidate(void)
+{
+    gForceFull = 1;
+}
+
+void mac_display_present(void)
+{
+    int sy, bc, k;
+    unsigned char *src = p8_screen;
+    Ptr base = gOffBits.baseAddr;
+    int dirty_min = -1, dirty_max = -1;
+
+    for (sy = 0; sy < P8_H; sy++) {
+        const unsigned char *prow = src + sy * P8_W;
+        unsigned char *pprev = gPrev + sy * P8_W;
+        const unsigned char *sprow;
+        unsigned char *out0, *out1;
+
+        if (!gForceFull) {                     /* row unchanged -> skip */
+            const long *a = (const long *)prow, *b = (const long *)pprev;
+            int same = 1;
+            for (k = 0; k < (int)(P8_W / sizeof(long)); k++)
+                if (a[k] != b[k]) { same = 0; break; }
+            if (same) continue;
+        }
+        if (dirty_min < 0) dirty_min = sy;
+        dirty_max = sy;
+
+        sprow = gSolidPat[sy & 7];
+        out0 = (unsigned char *)(base + (sy * 2) * OFF_ROWBYTES);
+        out1 = out0 + OFF_ROWBYTES;
+
+        for (bc = 0; bc < OFF_ROWBYTES; bc++) {
+            int px0 = bc * 4;                  /* 8 out cols == 4 src px */
+            unsigned char c0 = prow[px0], c1 = prow[px0 + 1];
+            unsigned char c2 = prow[px0 + 2], c3 = prow[px0 + 3];
+            unsigned char b;
+            if (c0 == c1 && c1 == c2 && c2 == c3) {
+                b = sprow[c0 & 15];            /* fast path */
+            } else {                           /* mixed byte: 2 out px per src px */
+                b = (unsigned char)
+                    ( (sprow[c0 & 15] & 0xC0)
+                    | (sprow[c1 & 15] & 0x30)
+                    | (sprow[c2 & 15] & 0x0C)
+                    | (sprow[c3 & 15] & 0x03) );
+            }
+            out0[bc] = b;
+        }
+        for (k = 0; k < OFF_ROWBYTES; k++) out1[k] = out0[k];   /* 2x vertical */
+        for (k = 0; k < P8_W; k++) pprev[k] = prow[k];
+    }
+    gForceFull = 0;
+    if (dirty_min < 0) return;                 /* nothing changed */
+
+    {
+        Rect srcR, dstR;
+        SetRect(&srcR, 0, (short)(dirty_min * 2), OFF_W, (short)(dirty_max * 2 + 2));
+        dstR = srcR;
+        OffsetRect(&dstR, gDisplayDstRect.left, gDisplayDstRect.top);
+        SetPort((GrafPtr)gWin);
+        CopyBits(&gOffBits, &((GrafPtr)gWin)->portBits, &srcR, &dstR, srcCopy, NULL);
+    }
+}

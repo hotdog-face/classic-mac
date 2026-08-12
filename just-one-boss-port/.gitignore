@@ -1,0 +1,12 @@
+# build intermediates
+build/
+
+# contains Apple System software -- never publish
+JustOneBoss-Bootable.dsk
+
+# the original PICO-8 cartridge lives in the creator's repo:
+# https://github.com/aylanonsense/just-one-boss
+source/just_one_boss.p8
+
+.DS_Store
+*.pgm
