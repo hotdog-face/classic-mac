@@ -5,6 +5,8 @@ written in C and built with the [Retro68](https://github.com/autc04/Retro68) cro
 on a modern Mac. Everything here runs on a stock 8 MHz 68000 with 1–4 MB of RAM — real
 hardware or emulators (Mini vMac, Basilisk II, PCE).
 
+**Case study and video:** [mitchellv.me/work/classic-mac](https://www.mitchellv.me/work/classic-mac) · by [Mitchell Vizensky](https://www.mitchellv.me), game UX designer
+
 Most projects include a prebuilt `.dsk` floppy image you can mount directly in an emulator
 or copy over with a Floppy Emu / BlueSCSI. The disk images contain only our own software —
 you supply your own System boot disk.
