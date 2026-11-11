@@ -7,6 +7,8 @@ hardware or emulators (Mini vMac, Basilisk II, PCE).
 
 **Case study and video:** [mitchellv.me/work/classic-mac](https://www.mitchellv.me/work/classic-mac) · by [Mitchell Vizensky](https://www.mitchellv.me), game UX designer
 
+**Download:** One Foe, Pip, AntFarm, Aquarium and GrowCity as ready-to-run disk images, free or pay what you like, at [lumpybutt33.itch.io/one-foe-and-friends](https://lumpybutt33.itch.io/one-foe-and-friends).
+
 If it's useful to you, you can [buy me a coffee on Ko-fi](https://ko-fi.com/Y4G62AHO0A). It helps keep these projects going.
 
 Most projects include a prebuilt `.dsk` floppy image you can mount directly in an emulator
