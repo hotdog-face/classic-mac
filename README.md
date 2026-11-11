@@ -7,6 +7,8 @@ hardware or emulators (Mini vMac, Basilisk II, PCE).
 
 **Case study and video:** [mitchellv.me/work/classic-mac](https://www.mitchellv.me/work/classic-mac) · by [Mitchell Vizensky](https://www.mitchellv.me), game UX designer
 
+If it's useful to you, you can [buy me a coffee on Ko-fi](https://ko-fi.com/Y4G62AHO0A). It helps keep these projects going.
+
 Most projects include a prebuilt `.dsk` floppy image you can mount directly in an emulator
 or copy over with a Floppy Emu / BlueSCSI. The disk images contain only our own software —
 you supply your own System boot disk.
